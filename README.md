@@ -60,7 +60,7 @@ You ── /ask ──▶ Query Analyst ──▶ Retriever ──▶ Reranker �
 ### 1. Install the plugin
 
 ```bash
-claude --plugin-dir /path/to/fablers-rag/plugin
+claude plugin install fablers-agentic-rag
 ```
 
 ### 2. Prepare your data
