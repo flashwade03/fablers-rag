@@ -59,8 +59,9 @@ You ── /ask ──▶ Query Analyst ──▶ Retriever ──▶ Reranker �
 
 ### 1. 플러그인 설치
 
-```bash
-claude plugin install fablers-agentic-rag
+Claude Code에서 실행:
+```
+/plugin install fablers-agentic-rag@flashwade03/fablers-rag
 ```
 
 ### 2. 데이터 준비

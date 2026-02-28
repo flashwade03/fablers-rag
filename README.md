@@ -59,8 +59,9 @@ You ── /ask ──▶ Query Analyst ──▶ Retriever ──▶ Reranker �
 
 ### 1. Install the plugin
 
-```bash
-claude plugin install fablers-agentic-rag
+In Claude Code, run:
+```
+/plugin install fablers-agentic-rag@flashwade03/fablers-rag
 ```
 
 ### 2. Prepare your data
