@@ -23,21 +23,13 @@ def _get_client():
 
 
 def _build_embedding_text(chunk: Dict) -> str:
-    """Build the text to embed, including metadata context.
+    """Build the text to embed, including heading context.
 
-    Format: "Chapter X: Title > Section: chunk_text"
-    This helps the embedding model understand the hierarchical context.
+    Prepends the heading (if present) to help the embedding model
+    understand the hierarchical context.
     """
-    prefix_parts = []
-    if chunk.get("chapter_title"):
-        prefix_parts.append(f"Chapter {chunk['chapter_number']}: {chunk['chapter_title']}")
-    if chunk.get("section_title"):
-        prefix_parts.append(chunk["section_title"])
-
-    prefix = " > ".join(prefix_parts)
-    if prefix:
-        return f"{prefix}\n\n{chunk['text']}"
-    return chunk["text"]
+    prefix = chunk.get("heading", "")
+    return f"{prefix}\n\n{chunk['text']}" if prefix else chunk["text"]
 
 
 def generate_embeddings(chunks: List[Dict],
@@ -111,17 +103,10 @@ def save_embeddings(embeddings: np.ndarray, metadata: List[Dict],
 
     np.savez_compressed(embeddings_path, embeddings=embeddings)
 
-    # Save metadata (chunk_id, chapter, section, page_range for each vector)
+    # Save metadata: all keys except 'text' for each vector
     meta = []
     for chunk in metadata:
-        meta.append({
-            "chunk_id": chunk["chunk_id"],
-            "chapter_number": chunk["chapter_number"],
-            "chapter_title": chunk["chapter_title"],
-            "section_title": chunk["section_title"],
-            "page_range": chunk["page_range"],
-            "token_estimate": chunk["token_estimate"]
-        })
+        meta.append({k: v for k, v in chunk.items() if k != "text"})
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
 

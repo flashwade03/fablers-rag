@@ -103,16 +103,18 @@ def hybrid_search(query: str, api_key: str, embeddings: np.ndarray,
     for cid in sorted_ids[:top_k]:
         chunk = chunk_map.get(cid)
         if chunk:
-            results.append({
+            result = {
                 "chunk_id": cid,
                 "text": chunk["text"],
                 "score": round(combined[cid], 4),
-                "chapter_number": chunk["chapter_number"],
-                "chapter_title": chunk["chapter_title"],
-                "section_title": chunk["section_title"],
-                "page_range": chunk["page_range"],
                 "matched_query": query,
-            })
+            }
+            # Pass through both old and new metadata keys for backward compat
+            for key in ("heading", "heading_level", "page_range", "source_file",
+                        "chapter_number", "chapter_title", "section_title"):
+                if key in chunk:
+                    result[key] = chunk[key]
+            results.append(result)
     return results
 
 

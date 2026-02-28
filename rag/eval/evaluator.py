@@ -56,8 +56,7 @@ def evaluate_retrieval(retriever: Retriever,
             "found": rank > 0,
             "retrieved_ids": retrieved_ids[:10],  # Store top 10 for diagnostics
             "top_result_score": search_results[0].score if search_results else 0,
-            "chapter_number": item.get("chapter_number", ""),
-            "section_title": item.get("section_title", "")
+            "heading": item.get("heading", "")
         })
 
     # Compute aggregate metrics

@@ -36,8 +36,7 @@ def diagnose_failures(eval_results: Dict, chunks: List[Dict]) -> Dict:
             recall_failures.append({
                 "question": item["question"],
                 "expected_chunk_id": item["expected_chunk_id"],
-                "expected_chapter": item.get("chapter_number", ""),
-                "expected_section": item.get("section_title", ""),
+                "expected_heading": item.get("heading", expected_chunk.get("heading", "")),
                 "expected_text_preview": expected_chunk.get("text", "")[:200],
                 "retrieved_instead": item["retrieved_ids"][:5],
                 "category": "RECALL_FAILURE"
@@ -47,7 +46,7 @@ def diagnose_failures(eval_results: Dict, chunks: List[Dict]) -> Dict:
                 "question": item["question"],
                 "expected_chunk_id": item["expected_chunk_id"],
                 "actual_rank": item["rank"],
-                "expected_section": item.get("section_title", ""),
+                "expected_heading": item.get("heading", ""),
                 "category": "RANKING_ISSUE"
             })
         else:
@@ -57,16 +56,16 @@ def diagnose_failures(eval_results: Dict, chunks: List[Dict]) -> Dict:
                 "category": "SUCCESS"
             })
 
-    # Chapter-level failure analysis
-    failure_chapters = Counter()
+    # Heading-level failure analysis
+    failure_headings = Counter()
     for f in recall_failures + ranking_issues:
-        ch = f.get("expected_chapter", "unknown")
-        failure_chapters[ch] += 1
+        heading = f.get("expected_heading", "unknown")
+        failure_headings[heading] += 1
 
     # Generate recommendations
     recommendations = _generate_recommendations(
         len(recall_failures), len(ranking_issues), len(successes),
-        failure_chapters
+        failure_headings
     )
 
     total = len(details)
@@ -80,7 +79,7 @@ def diagnose_failures(eval_results: Dict, chunks: List[Dict]) -> Dict:
         },
         "recall_failures": recall_failures,
         "ranking_issues": ranking_issues,
-        "failure_by_chapter": dict(failure_chapters.most_common()),
+        "failure_by_heading": dict(failure_headings.most_common()),
         "recommendations": recommendations
     }
 
@@ -88,7 +87,7 @@ def diagnose_failures(eval_results: Dict, chunks: List[Dict]) -> Dict:
 
 
 def _generate_recommendations(recall_failures: int, ranking_issues: int,
-                              successes: int, failure_chapters: Counter) -> List[str]:
+                              successes: int, failure_headings: Counter) -> List[str]:
     """Generate actionable recommendations based on failure patterns."""
     total = recall_failures + ranking_issues + successes
     if total == 0:
@@ -118,13 +117,14 @@ def _generate_recommendations(recall_failures: int, ranking_issues: int,
             "Consider enabling reranking (config.RERANKING = True) for better precision."
         )
 
-    # Chapter-specific issues
-    if failure_chapters:
-        worst_chapter = failure_chapters.most_common(1)[0]
-        if worst_chapter[1] >= 3:
+    # Heading-specific issues
+    if failure_headings:
+        worst_heading = failure_headings.most_common(1)[0]
+        if worst_heading[1] >= 3:
+            label = worst_heading[0] or "(no heading)"
             recommendations.append(
-                f"Chapter {worst_chapter[0]} has the most failures ({worst_chapter[1]}). "
-                "Check if chunking is working correctly for this chapter."
+                f"Section '{label}' has the most failures ({worst_heading[1]}). "
+                "Check if chunking is working correctly for this section."
             )
 
     if not recommendations:
@@ -159,8 +159,9 @@ def format_report(report: Dict) -> str:
     if report["recall_failures"]:
         lines.append(f"RECALL FAILURES ({len(report['recall_failures'])} cases):")
         for f in report["recall_failures"][:5]:  # Show top 5
+            heading = f.get("expected_heading", "")[:40]
             lines.append(f"  Q: {f['question'][:80]}...")
-            lines.append(f"    Expected: {f['expected_chunk_id']} ({f['expected_section'][:40]})")
+            lines.append(f"    Expected: {f['expected_chunk_id']} ({heading})")
             lines.append(f"    Got instead: {f['retrieved_instead'][:3]}")
             lines.append("")
 
@@ -171,9 +172,10 @@ def format_report(report: Dict) -> str:
             lines.append(f"    Expected chunk ranked #{r['actual_rank']} (should be top 5)")
             lines.append("")
 
-    if report["failure_by_chapter"]:
-        lines.append("FAILURES BY CHAPTER:")
-        for ch, count in sorted(report["failure_by_chapter"].items(), key=lambda x: str(x[0])):
-            lines.append(f"  Chapter {ch}: {count} failures")
+    if report.get("failure_by_heading"):
+        lines.append("FAILURES BY HEADING:")
+        for heading, count in sorted(report["failure_by_heading"].items(), key=lambda x: str(x[0])):
+            label = heading if heading else "(no heading)"
+            lines.append(f"  {label}: {count} failures")
 
     return "\n".join(lines)

@@ -112,14 +112,13 @@ class Retriever:
         for cid in sorted_ids[:top_k]:
             chunk = chunk_map.get(cid)
             if chunk:
+                metadata = {k: v for k, v in chunk.items()
+                            if k not in ("chunk_id", "text")}
                 results.append(SearchResult(
                     chunk_id=cid,
                     text=chunk["text"],
                     score=combined[cid],
-                    chapter_number=chunk["chapter_number"],
-                    chapter_title=chunk["chapter_title"],
-                    section_title=chunk["section_title"],
-                    page_range=chunk["page_range"]
+                    metadata=metadata,
                 ))
 
         return results
@@ -134,10 +133,19 @@ class Retriever:
 
         parts = []
         for i, r in enumerate(results):
-            parts.append(
-                f"[Source {i+1}] Chapter {r.chapter_number}: {r.chapter_title} "
-                f"> {r.section_title} (pages {r.page_range[0]}-{r.page_range[1]})\n"
-                f"{r.text}"
-            )
+            heading = r.metadata.get("heading", "")
+            page_range = r.metadata.get("page_range")
+            source = r.metadata.get("source_file", "")
+
+            label_parts = []
+            if heading:
+                label_parts.append(heading)
+            if page_range:
+                label_parts.append(f"pp. {page_range[0]}-{page_range[1]}")
+            if source:
+                label_parts.append(source)
+            label = " | ".join(label_parts) if label_parts else r.chunk_id
+
+            parts.append(f"[Source {i+1}] {label}\n{r.text}")
 
         return "\n\n---\n\n".join(parts)

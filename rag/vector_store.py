@@ -10,18 +10,16 @@ from . import config
 
 @dataclass
 class SearchResult:
-    """A single search result."""
+    """A single search result with flexible metadata."""
     chunk_id: str
     text: str
     score: float
-    chapter_number: int
-    chapter_title: str
-    section_title: str
-    page_range: List[int]
+    metadata: Dict  # heading, page_range, source_file, etc.
 
     def __repr__(self):
-        return (f"SearchResult(chunk_id={self.chunk_id}, score={self.score:.4f}, "
-                f"ch={self.chapter_number}, section='{self.section_title[:30]}...')")
+        heading = self.metadata.get("heading", "")
+        label = heading[:30] if heading else self.chunk_id
+        return f"SearchResult(chunk_id={self.chunk_id}, score={self.score:.4f}, '{label}')"
 
 
 class VectorStore:
@@ -79,14 +77,13 @@ class VectorStore:
         results = []
         for idx in top_indices:
             chunk = self.chunks[idx]
+            metadata = {k: v for k, v in chunk.items()
+                        if k not in ("chunk_id", "text")}
             results.append(SearchResult(
                 chunk_id=chunk["chunk_id"],
                 text=chunk["text"],
                 score=float(similarities[idx]),
-                chapter_number=chunk["chapter_number"],
-                chapter_title=chunk["chapter_title"],
-                section_title=chunk["section_title"],
-                page_range=chunk["page_range"]
+                metadata=metadata,
             ))
 
         return results

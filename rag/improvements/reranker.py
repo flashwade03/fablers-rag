@@ -41,7 +41,8 @@ def rerank(query: str, results: List[SearchResult],
     # Build the prompt for Claude to rerank
     passages = []
     for i, r in enumerate(results):
-        passages.append(f"[{i+1}] (Ch.{r.chapter_number} - {r.section_title})\n{r.text[:500]}")
+        heading = r.metadata.get("heading", "")
+        passages.append(f"[{i+1}] ({heading})\n{r.text[:500]}")
 
     prompt = RERANK_PROMPT.format(
         query=query,
@@ -60,7 +61,8 @@ def get_rerank_prompt(query: str, results: List[SearchResult]) -> str:
     """
     passages = []
     for i, r in enumerate(results):
-        passages.append(f"[{i+1}] (Ch.{r.chapter_number} - {r.section_title})\n{r.text[:500]}")
+        heading = r.metadata.get("heading", "")
+        passages.append(f"[{i+1}] ({heading})\n{r.text[:500]}")
 
     return RERANK_PROMPT.format(
         query=query,

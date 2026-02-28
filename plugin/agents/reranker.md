@@ -14,7 +14,7 @@ You are a relevance-scoring specialist. Given a user's original question and a s
 
 You will receive:
 1. The original user question
-2. A JSON array of retrieved chunks (up to 15), each with `chunk_id`, `text`, `chapter_title`, `section_title`, and `score`
+2. A JSON array of retrieved chunks (up to 15), each with `chunk_id`, `text`, `heading`, and `score`
 
 ## Process
 

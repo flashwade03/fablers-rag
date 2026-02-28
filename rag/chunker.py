@@ -1,17 +1,17 @@
-"""Structure-based chunking for textbook-style documents.
+"""Universal document chunking with automatic strategy detection.
 
-Strategy:
-1. Detect chapter boundaries ("C H A P T E R" pattern)
-2. Detect section boundaries (ALL-CAPS headings)
-3. Split oversized sections by paragraph with overlap
-4. Attach hierarchical metadata to each chunk
+Strategy selection (in order):
+1. Markdown headings — if document has >= 2 # headings
+2. Structural headings — ALL-CAPS or TitleCase heuristic
+3. Fallback — paragraph-based splitting
 """
 import re
 import json
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 
 from . import config
+from .ingest import Document
 
 
 def estimate_tokens(text: str) -> int:
@@ -19,170 +19,252 @@ def estimate_tokens(text: str) -> int:
     return len(text) // config.CHARS_PER_TOKEN
 
 
-def detect_chapters(pages: List[Dict]) -> List[Dict]:
-    """Detect chapter boundaries from pages.
+def chunk_document(document: Document) -> List[Dict]:
+    """Main chunking pipeline: Document -> structured chunks.
 
-    Looks for 'C H A P T E R' pattern which appears on chapter title pages.
+    Automatically selects the best chunking strategy based on content.
 
     Returns:
-        List of dicts: chapter_number, title, start_page, pages (list of page dicts)
+        List of chunk dicts with keys:
+            chunk_id, text, token_estimate, source_file,
+            heading (optional), heading_level (optional), page_range (optional)
     """
-    chapters = []
-    chapter_start_pages = []
+    full_text = "\n\n".join(p.text for p in document.pages)
 
-    # Find all chapter start pages
-    for i, page in enumerate(pages):
-        if "C H A P T E R" in page["text"]:
-            chapter_start_pages.append(i)
+    # Build page map for PDF documents (character offset -> page number)
+    page_map = _build_page_map(document) if document.format == "pdf" else None
 
-    # Also include pre-chapter content (Hello, Acknowledgments, etc.)
-    # as a "Chapter 0" for completeness
-    if chapter_start_pages and chapter_start_pages[0] > 0:
-        pre_chapter_pages = pages[:chapter_start_pages[0]]
-        # Filter out blank/TOC pages
-        content_pages = [p for p in pre_chapter_pages
-                        if len(p["text"]) > 100
-                        and "TABLE OF CONTENTS" not in p["text"]
-                        and "TABLE OF LENSES" not in p["text"]
-                        and "This page intentionally" not in p["text"]]
-        if content_pages:
-            chapters.append({
-                "chapter_number": 0,
-                "title": "Introduction",
-                "start_page": content_pages[0]["page_number"],
-                "pages": content_pages
-            })
+    # Try strategies in order
+    sections = _detect_markdown_headings(full_text)
+    if sections is None:
+        sections = _detect_structural_headings(document)
+    if sections is None:
+        sections = _fallback_paragraph_split(full_text)
 
-    # Extract each chapter
-    for idx, start_idx in enumerate(chapter_start_pages):
-        # Chapter title page: extract chapter number and title from next page
-        end_idx = chapter_start_pages[idx + 1] if idx + 1 < len(chapter_start_pages) else len(pages)
-        chapter_pages = pages[start_idx:end_idx]
+    # Convert sections to chunks
+    all_chunks = []
+    chunk_counter = 0
 
-        # Parse chapter title from the chapter cover page itself
-        # Format: "C H A P T E R\nONE\nIn the Beginning,\nThere Is the Designer"
-        title = "Unknown"
-        chapter_num = idx + 1
-        if chapter_pages:
-            cover_text = chapter_pages[0]["text"]
-            cover_lines = [l.strip() for l in cover_text.split("\n") if l.strip()]
-            # Find lines after "C H A P T E R" and the number word
-            title_lines = []
-            past_chapter_marker = False
-            past_number = False
-            for line in cover_lines:
-                if "C H A P T E R" in line:
-                    past_chapter_marker = True
-                    continue
-                if past_chapter_marker and not past_number:
-                    # This should be the number word (ONE, TWO, etc.)
-                    if line.isupper() and len(line) < 20:
-                        past_number = True
-                        continue
-                if past_number:
-                    # Skip FIGURE references
-                    if line.startswith("FIGURE") or line.startswith("TABLE"):
-                        break
-                    # These are title lines until we hit body text (lowercase start)
-                    if line[0].isupper() and not line[0].isdigit():
-                        title_lines.append(line)
-                    else:
-                        break
-            if title_lines:
-                title = " ".join(title_lines)
+    for section in sections:
+        section_tokens = estimate_tokens(section["text"])
 
-        chapters.append({
-            "chapter_number": chapter_num,
-            "title": title,
-            "start_page": chapter_pages[0]["page_number"],
-            "pages": chapter_pages
+        if section_tokens <= config.CHUNK_MAX_TOKENS:
+            chunk_counter += 1
+            chunk = {
+                "chunk_id": f"chunk_{chunk_counter:04d}",
+                "text": section["text"],
+                "token_estimate": section_tokens,
+                "source_file": document.source_file,
+            }
+            if section.get("heading"):
+                chunk["heading"] = section["heading"]
+            if section.get("heading_level") is not None:
+                chunk["heading_level"] = section["heading_level"]
+            if section.get("page_range"):
+                chunk["page_range"] = section["page_range"]
+            all_chunks.append(chunk)
+        else:
+            sub_chunks = split_large_section(
+                section["text"],
+                config.CHUNK_MAX_TOKENS,
+                config.CHUNK_OVERLAP_SENTENCES,
+            )
+            for i, sub_text in enumerate(sub_chunks):
+                chunk_counter += 1
+                heading = section.get("heading", "")
+                chunk = {
+                    "chunk_id": f"chunk_{chunk_counter:04d}",
+                    "text": sub_text,
+                    "token_estimate": estimate_tokens(sub_text),
+                    "source_file": document.source_file,
+                }
+                if heading:
+                    chunk["heading"] = f"{heading} (part {i + 1})"
+                if section.get("heading_level") is not None:
+                    chunk["heading_level"] = section["heading_level"]
+                if section.get("page_range"):
+                    chunk["page_range"] = section["page_range"]
+                all_chunks.append(chunk)
+
+    return all_chunks
+
+
+# --- Strategy 1: Markdown headings ---
+
+_MD_HEADING_RE = re.compile(r"^(#{1,4})\s+(.+)$", re.MULTILINE)
+
+
+def _detect_markdown_headings(full_text: str) -> Optional[List[Dict]]:
+    """Split text by Markdown headings (# through ####).
+
+    Returns None if fewer than 2 headings found.
+    """
+    matches = list(_MD_HEADING_RE.finditer(full_text))
+    if len(matches) < 2:
+        return None
+
+    sections = []
+
+    # Content before first heading
+    pre_text = full_text[: matches[0].start()].strip()
+    if pre_text:
+        sections.append({
+            "text": pre_text,
+            "heading": None,
+            "heading_level": None,
         })
 
-    return chapters
+    for i, m in enumerate(matches):
+        level = len(m.group(1))
+        heading = m.group(2).strip()
+        start = m.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(full_text)
+        body = full_text[start:end].strip()
 
-
-def detect_sections(chapter: Dict) -> List[Dict]:
-    """Detect section boundaries within a chapter using ALL-CAPS headings.
-
-    Returns:
-        List of dicts: section_title, text, page_range
-    """
-    # Combine all page text for this chapter
-    combined_lines = []
-    for page in chapter["pages"]:
-        for line in page["text"].split("\n"):
-            combined_lines.append({
-                "text": line,
-                "page": page["page_number"]
+        if body:
+            sections.append({
+                "text": body,
+                "heading": heading,
+                "heading_level": level,
             })
 
-    # Skip the chapter title page (first page with "C H A P T E R")
+    return sections if sections else None
+
+
+# --- Strategy 2: Structural headings (ALL-CAPS / TitleCase) ---
+
+_ALLCAPS_RE = re.compile(r"^[A-Z][A-Z\s\-:,]{4,79}$")
+
+
+def _is_structural_heading(line: str, prev_blank: bool) -> bool:
+    """Check if a line looks like a structural heading."""
+    stripped = line.strip()
+    if not stripped or not prev_blank:
+        return False
+
+    # ALL-CAPS heading (5-80 chars)
+    if _ALLCAPS_RE.match(stripped) and len(stripped) >= 5:
+        return True
+
+    # TitleCase heading (< 60 chars, no trailing punctuation)
+    if (len(stripped) < 60
+            and stripped.istitle()
+            and stripped[-1] not in ".!?,;:"):
+        return True
+
+    return False
+
+
+def _detect_structural_headings(document: Document) -> Optional[List[Dict]]:
+    """Detect ALL-CAPS or TitleCase headings with blank-line boundaries.
+
+    Returns None if fewer than 2 headings found.
+    """
+    # Combine all page text
+    lines_with_pages = []
+    for page in document.pages:
+        page_num = page.page_number
+        for line in page.text.split("\n"):
+            lines_with_pages.append((line, page_num))
+
+    # Find heading positions
+    heading_indices = []
+    for i, (line, _) in enumerate(lines_with_pages):
+        prev_blank = (i == 0) or (not lines_with_pages[i - 1][0].strip())
+        if _is_structural_heading(line, prev_blank):
+            heading_indices.append(i)
+
+    if len(heading_indices) < 2:
+        return None
+
     sections = []
-    current_section = None
-    current_lines = []
-    current_pages = set()
 
-    # Pattern for section headings: ALL CAPS, reasonable length, not a chapter header
-    chapter_header_pattern = re.compile(
-        r'^CHAPTER\s*(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|'
-        r'ELEVEN|TWELVE|THIRTEEN|FOURTEEN|FIFTEEN|SIXTEEN|SEVENTEEN|'
-        r'EIGHTEEN|NINETEEN|TWENTY|THIRTY|TWENTY-ONE|TWENTY-TWO|'
-        r'TWENTY-THREE|TWENTY-FOUR|TWENTY-FIVE|TWENTY-SIX|TWENTY-SEVEN|'
-        r'TWENTY-EIGHT|TWENTY-NINE|THIRTY-ONE|THIRTY-TWO)'
-    )
-
-    for item in combined_lines:
-        line = item["text"].strip()
-        page = item["page"]
-
-        if not line:
-            continue
-
-        # Check if this is a section heading
-        is_heading = (
-            line.isupper()
-            and 5 < len(line) < 80
-            and "C H A P T E R" not in line
-            and not chapter_header_pattern.match(line)
-            and not line.startswith("FIGURE")
-            and not line.startswith("TABLE")
-        )
-
-        if is_heading:
-            # Save previous section
-            if current_lines:
-                sections.append({
-                    "section_title": current_section or "Opening",
-                    "text": "\n".join(current_lines),
-                    "page_range": (min(current_pages), max(current_pages))
-                })
-            current_section = line
-            current_lines = []
-            current_pages = {page}
-        else:
-            current_lines.append(line)
-            current_pages.add(page)
-
-    # Don't forget the last section
-    if current_lines:
+    # Content before first heading
+    pre_lines = [lines_with_pages[j] for j in range(heading_indices[0])]
+    pre_text = "\n".join(l for l, _ in pre_lines).strip()
+    if pre_text:
+        pages = [p for _, p in pre_lines if p is not None]
         sections.append({
-            "section_title": current_section or "Opening",
-            "text": "\n".join(current_lines),
-            "page_range": (min(current_pages), max(current_pages))
+            "text": pre_text,
+            "heading": None,
+            "heading_level": None,
+            "page_range": [min(pages), max(pages)] if pages else None,
+        })
+
+    for idx, h_idx in enumerate(heading_indices):
+        heading_text = lines_with_pages[h_idx][0].strip()
+        start = h_idx + 1
+        end = heading_indices[idx + 1] if idx + 1 < len(heading_indices) else len(lines_with_pages)
+        body_items = lines_with_pages[start:end]
+        body = "\n".join(l for l, _ in body_items).strip()
+
+        if body:
+            pages = [p for _, p in body_items if p is not None]
+            sections.append({
+                "text": body,
+                "heading": heading_text,
+                "heading_level": None,
+                "page_range": [min(pages), max(pages)] if pages else None,
+            })
+
+    return sections if sections else None
+
+
+# --- Strategy 3: Fallback paragraph splitting ---
+
+def _fallback_paragraph_split(full_text: str) -> List[Dict]:
+    """Split text into sections by double newlines (paragraph boundaries)."""
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", full_text) if p.strip()]
+
+    if not paragraphs:
+        return [{"text": full_text.strip(), "heading": None, "heading_level": None}]
+
+    # Group paragraphs into sections of roughly CHUNK_MAX_TOKENS
+    sections = []
+    current_paras = []
+    current_tokens = 0
+
+    for para in paragraphs:
+        para_tokens = estimate_tokens(para)
+        if current_tokens + para_tokens > config.CHUNK_MAX_TOKENS and current_paras:
+            sections.append({
+                "text": "\n\n".join(current_paras),
+                "heading": None,
+                "heading_level": None,
+            })
+            current_paras = []
+            current_tokens = 0
+        current_paras.append(para)
+        current_tokens += para_tokens
+
+    if current_paras:
+        sections.append({
+            "text": "\n\n".join(current_paras),
+            "heading": None,
+            "heading_level": None,
         })
 
     return sections
 
 
+# --- Shared utilities ---
+
+def _build_page_map(document: Document) -> Dict:
+    """Build a mapping for page number lookups (future use)."""
+    page_map = {}
+    offset = 0
+    for page in document.pages:
+        page_map[offset] = page.page_number
+        offset += len(page.text) + 2  # +2 for "\n\n" join
+    return page_map
+
+
 def _split_into_paragraphs(text: str) -> List[str]:
-    """Split text into paragraphs, handling PDF text that may lack double newlines."""
-    # Try double newline first
+    """Split text into paragraphs, handling various newline patterns."""
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
     if len(paragraphs) > 1:
         return paragraphs
 
-    # Fall back to single newlines, grouping consecutive lines into paragraphs
-    # by detecting blank-ish transitions
     lines = text.split("\n")
     paragraphs = []
     current = []
@@ -197,9 +279,8 @@ def _split_into_paragraphs(text: str) -> List[str]:
     if current:
         paragraphs.append("\n".join(current))
 
-    # If still one big block, split by sentences
     if len(paragraphs) <= 1 and estimate_tokens(text) > config.CHUNK_MAX_TOKENS:
-        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+        sentences = re.split(r"(?<=[.!?])\s+", text.strip())
         return sentences
 
     return paragraphs if paragraphs else [text]
@@ -226,9 +307,8 @@ def split_large_section(section_text: str, max_tokens: int,
     for para in paragraphs:
         para_tokens = estimate_tokens(para)
 
-        # If single paragraph exceeds max, split it by sentences
         if para_tokens > max_tokens:
-            sentences = re.split(r'(?<=[.!?])\s+', para)
+            sentences = re.split(r"(?<=[.!?])\s+", para)
             for sent in sentences:
                 sent_tokens = estimate_tokens(sent)
                 if current_tokens + sent_tokens > max_tokens and current_chunk:
@@ -245,14 +325,11 @@ def split_large_section(section_text: str, max_tokens: int,
             continue
 
         if current_tokens + para_tokens > max_tokens and current_chunk:
-            # Save current chunk
             chunk_text = "\n\n".join(current_chunk)
             chunks.append(chunk_text)
 
-            # Create overlap: take last N sentences from current chunk
             if overlap_sentences > 0:
-                all_text = chunk_text
-                sentences = re.split(r'(?<=[.!?])\s+', all_text)
+                sentences = re.split(r"(?<=[.!?])\s+", chunk_text)
                 overlap = sentences[-overlap_sentences:] if len(sentences) >= overlap_sentences else sentences
                 current_chunk = [" ".join(overlap)]
                 current_tokens = estimate_tokens(current_chunk[0])
@@ -267,58 +344,6 @@ def split_large_section(section_text: str, max_tokens: int,
         chunks.append("\n\n".join(current_chunk))
 
     return chunks if chunks else [section_text]
-
-
-def chunk_document(pages: List[Dict]) -> List[Dict]:
-    """Main chunking pipeline: pages → structured chunks.
-
-    Returns:
-        List of chunk dicts with keys:
-            chunk_id, text, chapter_number, chapter_title,
-            section_title, page_range, token_estimate
-    """
-    chapters = detect_chapters(pages)
-    all_chunks = []
-    chunk_counter = 0
-
-    for chapter in chapters:
-        sections = detect_sections(chapter)
-
-        for section in sections:
-            section_tokens = estimate_tokens(section["text"])
-
-            if section_tokens <= config.CHUNK_MAX_TOKENS:
-                # Section fits in one chunk
-                chunk_counter += 1
-                all_chunks.append({
-                    "chunk_id": f"chunk_{chunk_counter:04d}",
-                    "text": section["text"],
-                    "chapter_number": chapter["chapter_number"],
-                    "chapter_title": chapter["title"],
-                    "section_title": section["section_title"],
-                    "page_range": list(section["page_range"]),
-                    "token_estimate": section_tokens
-                })
-            else:
-                # Split large section
-                sub_chunks = split_large_section(
-                    section["text"],
-                    config.CHUNK_MAX_TOKENS,
-                    config.CHUNK_OVERLAP_SENTENCES
-                )
-                for i, sub_text in enumerate(sub_chunks):
-                    chunk_counter += 1
-                    all_chunks.append({
-                        "chunk_id": f"chunk_{chunk_counter:04d}",
-                        "text": sub_text,
-                        "chapter_number": chapter["chapter_number"],
-                        "chapter_title": chapter["title"],
-                        "section_title": f"{section['section_title']} (part {i+1})",
-                        "page_range": list(section["page_range"]),
-                        "token_estimate": estimate_tokens(sub_text)
-                    })
-
-    return all_chunks
 
 
 def save_chunks(chunks: List[Dict], output_path: Optional[Path] = None):

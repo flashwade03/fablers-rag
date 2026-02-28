@@ -19,7 +19,7 @@ from .. import config
 
 
 # Prompt template for Claude Code to generate test questions
-QUESTION_GENERATION_PROMPT = """Read the following text chunk from a book on game design.
+QUESTION_GENERATION_PROMPT = """Read the following text chunk from an indexed document.
 Generate {num_questions} specific questions that can ONLY be answered using information in this chunk.
 
 Requirements:
@@ -29,8 +29,7 @@ Requirements:
 - Questions should be answerable in 1-3 sentences
 
 Chunk ID: {chunk_id}
-Chapter: {chapter_title}
-Section: {section_title}
+Heading: {heading}
 
 Text:
 {text}
@@ -55,8 +54,7 @@ def get_generation_prompt(chunk: Dict, num_questions: int = 3) -> str:
     return QUESTION_GENERATION_PROMPT.format(
         num_questions=num_questions,
         chunk_id=chunk["chunk_id"],
-        chapter_title=chunk["chapter_title"],
-        section_title=chunk["section_title"],
+        heading=chunk.get("heading", ""),
         text=chunk["text"][:2000]  # Limit text length for prompt
     )
 
@@ -79,29 +77,35 @@ def sample_chunks_for_eval(chunks: List[Dict],
     # Filter out tiny chunks
     eligible = [c for c in chunks if c["token_estimate"] >= min_tokens]
 
-    # Group by chapter
-    by_chapter = {}
+    # Group by heading (if available), otherwise uniform sampling
+    by_heading = {}
     for c in eligible:
-        ch = c["chapter_number"]
-        if ch not in by_chapter:
-            by_chapter[ch] = []
-        by_chapter[ch].append(c)
+        key = c.get("heading", "__none__")
+        if key not in by_heading:
+            by_heading[key] = []
+        by_heading[key].append(c)
 
-    # Sample proportionally from each chapter
-    sampled = []
-    chapters = sorted(by_chapter.keys())
-    per_chapter = max(1, sample_size // len(chapters))
+    if len(by_heading) >= 2:
+        # Sample proportionally from each heading group
+        sampled = []
+        headings = sorted(by_heading.keys())
+        per_group = max(1, sample_size // len(headings))
 
-    for ch in chapters:
-        ch_chunks = by_chapter[ch]
-        n = min(per_chapter, len(ch_chunks))
-        sampled.extend(random.sample(ch_chunks, n))
+        for h in headings:
+            group_chunks = by_heading[h]
+            n = min(per_group, len(group_chunks))
+            sampled.extend(random.sample(group_chunks, n))
 
-    # If we need more, sample from remaining
-    if len(sampled) < sample_size:
-        remaining = [c for c in eligible if c not in sampled]
-        extra = min(sample_size - len(sampled), len(remaining))
-        sampled.extend(random.sample(remaining, extra))
+        # If we need more, sample from remaining
+        if len(sampled) < sample_size:
+            remaining = [c for c in eligible if c not in sampled]
+            extra = min(sample_size - len(sampled), len(remaining))
+            if extra > 0:
+                sampled.extend(random.sample(remaining, extra))
+    else:
+        # No heading groups — uniform sampling
+        n = min(sample_size, len(eligible))
+        sampled = random.sample(eligible, n)
 
     return sampled[:sample_size]
 
@@ -111,7 +115,7 @@ def save_testset(testset: List[Dict], label: str = ""):
 
     Args:
         testset: List of dicts with keys:
-            chunk_id, question, answer, chapter_number, section_title
+            chunk_id, question, answer, heading
         label: Optional label for this testset
     """
     config.EVAL_RESULTS_DIR.mkdir(parents=True, exist_ok=True)

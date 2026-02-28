@@ -1,6 +1,6 @@
 ---
 name: ask
-description: Ask a question about The Art of Game Design using the agentic RAG pipeline.
+description: Ask a question about your indexed document using the agentic RAG pipeline.
 argument-hint: "<질문>"
 ---
 

@@ -1,11 +1,11 @@
 ---
 name: fablers-rag
-description: "RAG system for document retrieval and Q&A. Use when users want to build a RAG pipeline from PDFs, search documents, evaluate retrieval quality, or improve search accuracy. Triggers: RAG, retrieval, document search, embed, chunk, evaluate RAG, hybrid search."
+description: "RAG system for document retrieval and Q&A. Use when users want to build a RAG pipeline from PDFs/TXT/Markdown, search documents, evaluate retrieval quality, or improve search accuracy. Triggers: RAG, retrieval, document search, embed, chunk, evaluate RAG, hybrid search."
 ---
 
 # RAG System Skill
 
-A complete RAG (Retrieval-Augmented Generation) pipeline with built-in evaluation and improvement tools.
+A complete RAG (Retrieval-Augmented Generation) pipeline with built-in evaluation and improvement tools. Supports PDF, plain text, and Markdown documents.
 
 ## Project Location
 
@@ -25,20 +25,33 @@ export OPENAI_API_KEY="sk-..."
 
 ## Commands
 
-### 1. Build RAG from PDF
+### 1. Build RAG from Document (CLI)
 
-When user says "build RAG", "index this PDF", or "embed this document":
+When user says "build RAG", "index this document", or "embed this file":
+
+```bash
+# Full pipeline: extract → chunk → embed → BM25 index
+python -m rag --document path/to/document.pdf --output-dir ./data
+
+# Markdown or text files also supported
+python -m rag --document notes.md --output-dir ./data/notes
+
+# Chunking only (skip embeddings, useful for testing)
+python -m rag --document notes.md --output-dir ./data/notes --skip-embeddings
+```
+
+### 1b. Build RAG (Python API)
 
 ```python
 import sys; sys.path.insert(0, '.')
-from rag.ingest import extract_pages
+from rag.ingest import extract
 from rag.chunker import chunk_document, save_chunks
 from rag.embedder import generate_embeddings, save_embeddings
 from rag.vector_store import VectorStore
 
-# Step 1: Extract and chunk
-pages = extract_pages("path/to/document.pdf")
-chunks = chunk_document(pages)
+# Step 1: Extract and chunk (PDF, TXT, or Markdown)
+document = extract("path/to/document.pdf")
+chunks = chunk_document(document)
 save_chunks(chunks)
 print(f"Created {len(chunks)} chunks")
 
@@ -192,11 +205,11 @@ All settings in `rag/config.py`:
 ## Architecture
 
 ```
-PDF → ingest.py → chunker.py → embedder.py → vector_store.py
-                                                    ↓
-                              query → retriever.py → SearchResults
-                                        ↓
-                              eval/ → evaluator.py → diagnostics.py
-                                        ↓
-                              improvements/ → hybrid_search.py, reranker.py
+PDF/TXT/MD → ingest.py → chunker.py → embedder.py → vector_store.py
+              (extract)   (auto-detect     ↓
+                           strategy)  retriever.py → SearchResults
+                                          ↓
+                            eval/ → evaluator.py → diagnostics.py
+                                          ↓
+                            improvements/ → hybrid_search.py, reranker.py
 ```
