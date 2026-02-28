@@ -1,0 +1,5 @@
+{
+  "name": "fablers-agentic-rag",
+  "version": "1.0.0",
+  "description": "Agentic RAG pipeline using Claude agents for query analysis, hybrid retrieval, reranking, CRAG validation, and answer synthesis over The Art of Game Design."
+}

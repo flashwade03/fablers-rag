@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.*
+*.local.md
+
+# Data (large binary / derived files)
+data/
+*.pdf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local state
+.claude/
