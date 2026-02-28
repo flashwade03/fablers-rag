@@ -2,12 +2,12 @@
 
 # fablers-agentic-rag
 
-**Ask a book. Get a cited answer.**
+**Ask your documents. Get a cited answer.**
 
-A Claude Code plugin that runs a full agentic RAG pipeline — query analysis, hybrid retrieval, reranking, CRAG validation, and cited answer synthesis — all orchestrated by Claude agents.
+A Claude Code plugin that runs a full agentic RAG pipeline — query analysis, hybrid retrieval, reranking, CRAG validation, and cited answer synthesis — all orchestrated by Claude agents. Supports PDF, plain text, and Markdown.
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge)](https://claude.ai)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue?style=for-the-badge)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md)
@@ -18,11 +18,9 @@ A Claude Code plugin that runs a full agentic RAG pipeline — query analysis, h
 
 ## What is this?
 
-You have a book. You have questions. But keyword search is fragile and LLMs hallucinate without sources.
+You have documents. You have questions. But keyword search is fragile and LLMs hallucinate without sources.
 
-**fablers-agentic-rag** bridges the gap: it chunks your document, indexes it with vector + BM25, and deploys a 5-agent pipeline that retrieves, validates, and synthesizes answers with page-level citations.
-
-Built on "The Art of Game Design: A Book of Lenses" by Jesse Schell — but the architecture generalizes to any document.
+**fablers-agentic-rag** bridges the gap: it chunks your document (PDF, TXT, or Markdown), indexes it with vector + BM25, and deploys a 5-agent pipeline that retrieves, validates, and synthesizes answers with page-level citations.
 
 ---
 
@@ -53,7 +51,7 @@ You ── /ask ──▶ Query Analyst ──▶ Retriever ──▶ Reranker �
 | 2 | **Retriever** | Runs hybrid search (vector cosine similarity + BM25 keyword matching) with per-query minimum allocation to ensure diverse coverage. |
 | 3 | **Reranker** | LLM-based relevance scoring. Selects the top 5 passages from up to 20 candidates. |
 | 4 | **Validator** | CRAG (Corrective RAG) check — are the passages sufficient? If not, rewrites the query and retries (max 2x). |
-| 5 | **Answer Synthesizer** | Produces the final answer with inline `[Source N]` citations and a sources section with chapter/page references. |
+| 5 | **Answer Synthesizer** | Produces the final answer with inline `[Source N]` citations and a sources section with heading/page references. |
 
 ---
 
@@ -70,9 +68,11 @@ claude --plugin-dir /path/to/fablers-rag/plugin
 Run the ingestion pipeline to generate chunks, embeddings, and BM25 index:
 
 ```bash
-pip install openai numpy rank_bm25
-python -m rag.ingest  # outputs to data/
+pip install openai numpy rank_bm25 pdfplumber
+python -m rag --document /path/to/your/document.pdf --output-dir ./data
 ```
+
+Supports `.pdf`, `.txt`, and `.md` files. Use `--skip-embeddings` to test chunking only.
 
 ### 3. Configure
 
@@ -92,8 +92,8 @@ openai_api_key: sk-...
 ### 4. Ask
 
 ```
-/ask What is a game design lens?
-/ask How does the elemental tetrad relate to game mechanics, and what lenses help evaluate each element?
+/ask What are the key concepts in chapter 3?
+/ask How does the author define the main framework, and what tools help evaluate each element?
 ```
 
 ---
@@ -123,11 +123,12 @@ fablers-rag/
 │   │   └── hooks.json           # Event hooks
 │   └── fablers-rag.template.md  # Config template
 ├── rag/                          # Ingestion & indexing
-│   ├── chunker.py
+│   ├── __main__.py              # CLI entry point
+│   ├── ingest.py                # Multi-format extraction (PDF/TXT/MD)
+│   ├── chunker.py               # Auto-detect chunking strategy
 │   ├── embedder.py
 │   ├── vector_store.py
 │   ├── retriever.py
-│   ├── ingest.py
 │   ├── config.py
 │   ├── eval/                    # Evaluation suite
 │   └── improvements/            # Search enhancements

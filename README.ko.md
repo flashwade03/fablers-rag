@@ -2,12 +2,12 @@
 
 # fablers-agentic-rag
 
-**책에게 물어보세요. 출처가 달린 답변을 받으세요.**
+**문서에게 물어보세요. 출처가 달린 답변을 받으세요.**
 
-쿼리 분석, 하이브리드 검색, 리랭킹, CRAG 검증, 인용 답변 합성까지 — Claude 에이전트가 오케스트레이션하는 Agentic RAG 파이프라인 플러그인.
+쿼리 분석, 하이브리드 검색, 리랭킹, CRAG 검증, 인용 답변 합성까지 — Claude 에이전트가 오케스트레이션하는 Agentic RAG 파이프라인 플러그인. PDF, 텍스트, 마크다운 지원.
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge)](https://claude.ai)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue?style=for-the-badge)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md)
@@ -18,11 +18,9 @@
 
 ## 이게 뭔가요?
 
-책은 있고, 질문도 있는데 — 키워드 검색은 부정확하고 LLM은 출처 없이 환각합니다.
+문서는 있고, 질문도 있는데 — 키워드 검색은 부정확하고 LLM은 출처 없이 환각합니다.
 
-**fablers-agentic-rag**가 그 간극을 메웁니다: 문서를 청킹하고, 벡터 + BM25로 인덱싱한 뒤, 5개 에이전트 파이프라인이 검색하고, 검증하고, 페이지 단위 인용이 달린 답변을 합성합니다.
-
-"The Art of Game Design: A Book of Lenses" (Jesse Schell)을 기반으로 만들었지만, 아키텍처는 어떤 문서에나 적용 가능합니다.
+**fablers-agentic-rag**가 그 간극을 메웁니다: 문서(PDF, TXT, 마크다운)를 청킹하고, 벡터 + BM25로 인덱싱한 뒤, 5개 에이전트 파이프라인이 검색하고, 검증하고, 페이지 단위 인용이 달린 답변을 합성합니다.
 
 ---
 
@@ -53,7 +51,7 @@ You ── /ask ──▶ Query Analyst ──▶ Retriever ──▶ Reranker �
 | 2 | **Retriever** | 하이브리드 검색 (벡터 코사인 유사도 + BM25 키워드 매칭). 쿼리별 최소 할당으로 다양한 커버리지 보장. |
 | 3 | **Reranker** | LLM 기반 관련성 스코어링. 최대 20개 후보에서 상위 5개 패시지 선별. |
 | 4 | **Validator** | CRAG (Corrective RAG) 검증 — 패시지가 충분한가? 아니면 쿼리를 재작성해서 재시도 (최대 2회). |
-| 5 | **Answer Synthesizer** | 인라인 `[Source N]` 인용과 챕터/페이지 참조가 포함된 최종 답변 생성. |
+| 5 | **Answer Synthesizer** | 인라인 `[Source N]` 인용과 헤딩/페이지 참조가 포함된 최종 답변 생성. |
 
 ---
 
@@ -70,9 +68,11 @@ claude --plugin-dir /path/to/fablers-rag/plugin
 인제스션 파이프라인을 실행해서 청크, 임베딩, BM25 인덱스를 생성합니다:
 
 ```bash
-pip install openai numpy rank_bm25
-python -m rag.ingest  # data/에 출력
+pip install openai numpy rank_bm25 pdfplumber
+python -m rag --document /path/to/your/document.pdf --output-dir ./data
 ```
+
+`.pdf`, `.txt`, `.md` 파일을 지원합니다. `--skip-embeddings`로 청킹만 테스트할 수 있습니다.
 
 ### 3. 설정
 
@@ -92,8 +92,8 @@ openai_api_key: sk-...
 ### 4. 질문하기
 
 ```
-/ask 게임 디자인 렌즈란 무엇인가?
-/ask 엘리멘탈 테트라드와 게임 메카닉스의 관계는 무엇이고, 각 요소를 평가하는 렌즈는?
+/ask 3장의 핵심 개념은 무엇인가?
+/ask 저자가 정의한 주요 프레임워크는 무엇이고, 각 요소를 평가하는 도구는?
 ```
 
 ---
@@ -123,11 +123,12 @@ fablers-rag/
 │   │   └── hooks.json           # 이벤트 훅
 │   └── fablers-rag.template.md  # 설정 템플릿
 ├── rag/                          # 인제스션 & 인덱싱
-│   ├── chunker.py
+│   ├── __main__.py              # CLI 진입점
+│   ├── ingest.py                # 멀티 포맷 추출 (PDF/TXT/MD)
+│   ├── chunker.py               # 자동 감지 청킹 전략
 │   ├── embedder.py
 │   ├── vector_store.py
 │   ├── retriever.py
-│   ├── ingest.py
 │   ├── config.py
 │   ├── eval/                    # 평가 스위트
 │   └── improvements/            # 검색 개선

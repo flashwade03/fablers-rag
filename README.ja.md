@@ -2,12 +2,12 @@
 
 # fablers-agentic-rag
 
-**本に聞こう。引用付きの回答を得よう。**
+**ドキュメントに聞こう。引用付きの回答を得よう。**
 
-クエリ分析、ハイブリッド検索、リランキング、CRAG検証、引用付き回答合成まで — Claude エージェントがオーケストレーションするAgentic RAGパイプラインプラグイン。
+クエリ分析、ハイブリッド検索、リランキング、CRAG検証、引用付き回答合成まで — Claude エージェントがオーケストレーションするAgentic RAGパイプラインプラグイン。PDF、テキスト、Markdownに対応。
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge)](https://claude.ai)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue?style=for-the-badge)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md)
@@ -18,11 +18,9 @@
 
 ## これは何？
 
-本があり、質問がある — でもキーワード検索は不正確で、LLMはソースなしに幻覚します。
+ドキュメントがあり、質問がある — でもキーワード検索は不正確で、LLMはソースなしに幻覚します。
 
-**fablers-agentic-rag**がそのギャップを埋めます：ドキュメントをチャンキングし、ベクトル + BM25でインデックス化し、5つのエージェントパイプラインが検索、検証、ページレベル引用付きの回答を合成します。
-
-"The Art of Game Design: A Book of Lenses"（Jesse Schell）をベースに構築 — アーキテクチャは任意のドキュメントに適用可能です。
+**fablers-agentic-rag**がそのギャップを埋めます：ドキュメント（PDF、TXT、Markdown）をチャンキングし、ベクトル + BM25でインデックス化し、5つのエージェントパイプラインが検索、検証、ページレベル引用付きの回答を合成します。
 
 ---
 
@@ -53,7 +51,7 @@ You ── /ask ──▶ Query Analyst ──▶ Retriever ──▶ Reranker �
 | 2 | **Retriever** | ハイブリッド検索（ベクトルコサイン類似度 + BM25キーワードマッチング）。クエリ別最小割当で多様なカバレッジを保証。 |
 | 3 | **Reranker** | LLMベースの関連性スコアリング。最大20件の候補から上位5件のパッセージを選別。 |
 | 4 | **Validator** | CRAG（Corrective RAG）検証 — パッセージは十分か？不十分ならクエリを書き換えてリトライ（最大2回）。 |
-| 5 | **Answer Synthesizer** | インライン`[Source N]`引用とチャプター/ページ参照を含む最終回答を生成。 |
+| 5 | **Answer Synthesizer** | インライン`[Source N]`引用と見出し/ページ参照を含む最終回答を生成。 |
 
 ---
 
@@ -70,9 +68,11 @@ claude --plugin-dir /path/to/fablers-rag/plugin
 インジェスションパイプラインを実行して、チャンク、エンベディング、BM25インデックスを生成：
 
 ```bash
-pip install openai numpy rank_bm25
-python -m rag.ingest  # data/に出力
+pip install openai numpy rank_bm25 pdfplumber
+python -m rag --document /path/to/your/document.pdf --output-dir ./data
 ```
+
+`.pdf`、`.txt`、`.md`ファイルに対応。`--skip-embeddings`でチャンキングのみテスト可能。
 
 ### 3. 設定
 
@@ -92,8 +92,8 @@ openai_api_key: sk-...
 ### 4. 質問する
 
 ```
-/ask ゲームデザインレンズとは何か？
-/ask エレメンタルテトラッドとゲームメカニクスの関係は何か、各要素を評価するレンズは？
+/ask 第3章の主要な概念は何ですか？
+/ask 著者が定義した主要なフレームワークは何で、各要素を評価するツールは？
 ```
 
 ---
@@ -123,11 +123,12 @@ fablers-rag/
 │   │   └── hooks.json           # イベントフック
 │   └── fablers-rag.template.md  # 設定テンプレート
 ├── rag/                          # インジェスション & インデックス化
-│   ├── chunker.py
+│   ├── __main__.py              # CLIエントリポイント
+│   ├── ingest.py                # マルチフォーマット抽出（PDF/TXT/MD）
+│   ├── chunker.py               # 自動検出チャンキング戦略
 │   ├── embedder.py
 │   ├── vector_store.py
 │   ├── retriever.py
-│   ├── ingest.py
 │   ├── config.py
 │   ├── eval/                    # 評価スイート
 │   └── improvements/            # 検索改善
