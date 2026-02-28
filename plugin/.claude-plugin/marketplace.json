@@ -1,0 +1,30 @@
+{
+  "name": "fablers-agentic-rag",
+  "id": "fablers-agentic-rag",
+  "owner": {
+    "name": "flashwade03"
+  },
+  "metadata": {
+    "description": "Agentic RAG pipeline using Claude agents for query analysis, hybrid retrieval, reranking, CRAG validation, and answer synthesis over The Art of Game Design.",
+    "version": "1.1.0"
+  },
+  "plugins": [
+    {
+      "name": "fablers-agentic-rag",
+      "source": "./",
+      "description": "Agentic RAG pipeline using Claude agents for query analysis, hybrid retrieval, reranking, CRAG validation, and answer synthesis over The Art of Game Design.",
+      "version": "1.1.0",
+      "author": {
+        "name": "flashwade03"
+      },
+      "keywords": [
+        "rag",
+        "agentic",
+        "game-design",
+        "retrieval",
+        "hybrid-search"
+      ],
+      "category": "research"
+    }
+  ]
+}
