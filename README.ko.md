@@ -59,8 +59,9 @@ You ── /ask ──▶ Query Analyst ──▶ Retriever ──▶ Reranker �
 
 ### 1. 플러그인 설치
 
-Claude Code에서 실행:
+Claude Code에서 마켓플레이스 추가 후 설치:
 ```
+/plugin marketplace add flashwade03/fablers-rag
 /plugin install fablers-agentic-rag@flashwade03/fablers-rag
 ```
 

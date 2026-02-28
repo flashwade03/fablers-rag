@@ -59,8 +59,9 @@ You ── /ask ──▶ Query Analyst ──▶ Retriever ──▶ Reranker �
 
 ### 1. Install the plugin
 
-In Claude Code, run:
+In Claude Code, add the marketplace and install:
 ```
+/plugin marketplace add flashwade03/fablers-rag
 /plugin install fablers-agentic-rag@flashwade03/fablers-rag
 ```
 
