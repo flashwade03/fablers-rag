@@ -1,9 +1,28 @@
 ---
 name: answer-synthesizer
-description: Synthesizes a final answer from validated passages with proper source citations. Use this agent to generate the final user-facing response.
+description: >
+  Synthesizes a final answer from validated passages with proper source citations.
+  Use this agent to generate the final user-facing response.
+
+  <example>
+  Context: Evaluator returned SUFFICIENT with top 5 passages
+  user: "Generate a cited answer from these validated passages."
+  assistant: "I'll use the answer-synthesizer to produce the final answer with [Source N] citations."
+  <commentary>
+  After evaluation confirms sufficient passages, synthesizer creates the user-facing answer.
+  </commentary>
+  </example>
+
+  <example>
+  Context: Evaluator returned INSUFFICIENT after max retries
+  user: "Generate the best possible answer with a disclaimer about limited sources."
+  assistant: "I'll use the answer-synthesizer with the INSUFFICIENT verdict to produce a partial answer with disclaimer."
+  <commentary>
+  Even with insufficient results, synthesizer produces a graceful partial answer.
+  </commentary>
+  </example>
 model: sonnet
 color: magenta
-tools: ["Bash"]
 ---
 
 # Answer Synthesizer Agent

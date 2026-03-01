@@ -7,7 +7,7 @@
 쿼리 분석, 하이브리드 검색, 평가 및 CRAG 검증, 인용 답변 합성까지 — Claude 에이전트가 오케스트레이션하는 Agentic RAG 파이프라인 플러그인. PDF, 텍스트, 마크다운 지원.
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge)](https://claude.ai)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-2.0.1-blue?style=for-the-badge)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md)

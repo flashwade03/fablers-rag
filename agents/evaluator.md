@@ -1,9 +1,28 @@
 ---
 name: evaluator
-description: Evaluates retrieved passages by reranking for relevance and performing CRAG validation. Use this agent to score, select top passages, and determine if retrieval results are sufficient to answer the question.
+description: >
+  Evaluates retrieved passages by reranking for relevance and performing CRAG validation.
+  Use this agent to score, select top passages, and determine if retrieval results are sufficient to answer the question.
+
+  <example>
+  Context: search.py returned 20 passages for a complex question
+  user: "Evaluate these retrieved passages and determine if they sufficiently answer the question."
+  assistant: "I'll use the evaluator to rerank by relevance and perform CRAG validation."
+  <commentary>
+  After search.py returns raw results, evaluator scores, selects top 5, and judges sufficiency.
+  </commentary>
+  </example>
+
+  <example>
+  Context: First evaluation returned RETRY_WITH_REWRITE, now evaluating retry results
+  user: "Re-evaluate with the new search results from the rewritten query."
+  assistant: "I'll use the evaluator again to check if the retry results are sufficient."
+  <commentary>
+  CRAG loop re-evaluation after query rewrite and re-search.
+  </commentary>
+  </example>
 model: haiku
 color: green
-tools: ["Bash"]
 ---
 
 # Evaluator Agent

@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Agentic RAG pipeline using Claude agents for query analysis, hybrid retrieval, evaluation, and answer synthesis with CRAG validation.",
-    "version": "2.0.0"
+    "version": "2.0.1"
   },
   "plugins": [
     {
       "name": "fablers-agentic-rag",
       "source": "./",
       "description": "Agentic RAG pipeline using Claude agents for query analysis, hybrid retrieval, evaluation, and answer synthesis with CRAG validation.",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "author": {
         "name": "flashwade03"
       },

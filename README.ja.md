@@ -7,7 +7,7 @@
 クエリ分析、ハイブリッド検索、評価とCRAG検証、引用付き回答合成まで — Claude エージェントがオーケストレーションするAgentic RAGパイプラインプラグイン。PDF、テキスト、Markdownに対応。
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-blueviolet?style=for-the-badge)](https://claude.ai)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-2.0.1-blue?style=for-the-badge)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md)
