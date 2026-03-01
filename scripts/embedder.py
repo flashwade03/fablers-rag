@@ -1,23 +1,31 @@
 """OpenAI embedding generation for document chunks."""
 import json
+import os
 import time
 import numpy as np
 from typing import List, Dict, Optional
 from pathlib import Path
 
-from . import config
+import config
+
+
+_api_key_override = None
+
+
+def set_api_key(key: str):
+    """Set the API key for embedding generation."""
+    global _api_key_override
+    _api_key_override = key
 
 
 def _get_client():
     """Lazy-load OpenAI client."""
     from openai import OpenAI
-    api_key = config.OPENAI_API_KEY
+    api_key = _api_key_override or os.environ.get("OPENAI_API_KEY", "")
     if not api_key:
         raise ValueError(
-            "OPENAI_API_KEY not set. Either:\n"
-            "  1. Set it in .env file in the project root\n"
-            "  2. Set the OPENAI_API_KEY environment variable\n"
-            "  3. Update config.OPENAI_API_KEY directly"
+            "OPENAI_API_KEY not set. Pass --api-key, set OPENAI_API_KEY env var, "
+            "or configure openai_api_key in .claude/fablers-agentic-rag.local.md"
         )
     return OpenAI(api_key=api_key)
 
@@ -96,8 +104,10 @@ def save_embeddings(embeddings: np.ndarray, metadata: List[Dict],
                     embeddings_path: Optional[Path] = None,
                     metadata_path: Optional[Path] = None):
     """Save embeddings and metadata to disk."""
-    embeddings_path = embeddings_path or config.EMBEDDINGS_FILE
-    metadata_path = metadata_path or config.METADATA_FILE
+    if embeddings_path is None:
+        embeddings_path = Path("embeddings.npz")
+    if metadata_path is None:
+        metadata_path = Path("metadata.json")
 
     embeddings_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -118,8 +128,10 @@ def load_embeddings(embeddings_path: Optional[Path] = None,
     Returns:
         (embeddings: np.ndarray, metadata: List[Dict])
     """
-    embeddings_path = embeddings_path or config.EMBEDDINGS_FILE
-    metadata_path = metadata_path or config.METADATA_FILE
+    if embeddings_path is None:
+        embeddings_path = Path("embeddings.npz")
+    if metadata_path is None:
+        metadata_path = Path("metadata.json")
 
     data = np.load(embeddings_path)
     embeddings = data["embeddings"]

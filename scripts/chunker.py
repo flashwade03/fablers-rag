@@ -10,8 +10,8 @@ import json
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 
-from . import config
-from .ingest import Document
+import config
+from ingest import Document
 
 
 def estimate_tokens(text: str) -> int:
@@ -348,7 +348,8 @@ def split_large_section(section_text: str, max_tokens: int,
 
 def save_chunks(chunks: List[Dict], output_path: Optional[Path] = None):
     """Save chunks to JSON file."""
-    output_path = output_path or config.CHUNKS_FILE
+    if output_path is None:
+        output_path = Path("chunks.json")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(chunks, f, indent=2, ensure_ascii=False)
@@ -357,6 +358,7 @@ def save_chunks(chunks: List[Dict], output_path: Optional[Path] = None):
 
 def load_chunks(input_path: Optional[Path] = None) -> List[Dict]:
     """Load chunks from JSON file."""
-    input_path = input_path or config.CHUNKS_FILE
+    if input_path is None:
+        input_path = Path("chunks.json")
     with open(input_path, "r", encoding="utf-8") as f:
         return json.load(f)

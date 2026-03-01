@@ -1,7 +1,7 @@
 ---
 name: query-analyst
 description: Analyzes user queries and generates optimized search queries for the RAG retrieval pipeline. Use this agent when you need to decompose, clarify, or rewrite a user question into effective search queries.
-model: sonnet
+model: haiku
 color: blue
 tools: ["Bash"]
 ---
