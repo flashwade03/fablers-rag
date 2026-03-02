@@ -43,6 +43,17 @@ The only external API call is OpenAI `text-embedding-3-small` for query embeddin
 
 **TL;DR**: An MCP gives you search results. This plugin gives you a validated, cited answer — powered by the Claude you're already paying for. Put those tokens to good use.
 
+### Designed for
+
+This plugin is built for deep Q&A on individual documents — not for indexing millions of records.
+
+- A textbook you want to study with citations
+- A technical manual you need to reference accurately
+- Research papers you want to cross-examine
+- Personal notes or documentation you want to query
+
+It uses numpy arrays and in-memory BM25 — no vector DB, no server. If your data fits in a few files, this is all you need. For enterprise-scale knowledge bases, use a dedicated vector DB solution instead.
+
 ---
 
 ## What's new in v2.0.0
