@@ -20,7 +20,25 @@ A Claude Code plugin that runs an agentic RAG pipeline — query analysis, hybri
 
 You have documents. You have questions. But keyword search is fragile and LLMs hallucinate without sources.
 
-**fablers-agentic-rag** bridges the gap: it chunks your document (PDF, TXT, or Markdown), indexes it with vector + BM25, and deploys a streamlined 3-agent pipeline that retrieves, validates, and synthesizes answers with page-level citations.
+**fablers-agentic-rag** bridges the gap: it chunks your document (PDF, TXT, or Markdown), indexes it with vector + BM25, and deploys a 3-agent pipeline that retrieves, validates, and synthesizes answers with page-level citations — all inside Claude Code.
+
+---
+
+## Why not just use a RAG MCP?
+
+Most RAG solutions for Claude Code are MCP servers — they embed your docs, retrieve top-k chunks, and paste them into the context window. That works for simple lookups, but falls apart for real questions.
+
+| | Typical RAG MCP | This Plugin |
+|---|---|---|
+| **Architecture** | Single retrieve → paste | Multi-agent pipeline with validation |
+| **Quality check** | None — returns whatever vector search finds | CRAG validation scores every passage, retries with rewritten queries |
+| **Complex questions** | Same path for all queries | Complexity routing — 1 agent for simple, 3 for multi-part |
+| **Citations** | Raw chunk dump or none | Every claim gets `[Source N]` inline + sources section |
+| **Search method** | Vector-only (misses exact terms) | Hybrid vector + BM25 (catches both semantics and keywords) |
+| **Infrastructure** | Often requires Docker, vector DB server | Zero infra — pure Python files + Claude agents |
+| **Self-correction** | One-shot, no retry | CRAG loop rewrites queries up to 2x when results are poor |
+
+**TL;DR**: An MCP gives you search results. This plugin gives you a validated, cited answer.
 
 ---
 
@@ -124,7 +142,7 @@ openai_api_key: sk-...
 ```
 fablers-rag/                          ← repo root = plugin
 ├── .claude-plugin/
-│   ├── plugin.json                   # Plugin manifest (v2.0.0)
+│   ├── plugin.json                   # Plugin manifest (v2.0.1)
 │   └── marketplace.json              # Marketplace metadata
 ├── agents/
 │   ├── query-analyst.md              # Query decomposition
