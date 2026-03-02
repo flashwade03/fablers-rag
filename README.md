@@ -30,6 +30,7 @@ Most RAG solutions for Claude Code are MCP servers — they embed your docs, ret
 
 | | Typical RAG MCP | This Plugin |
 |---|---|---|
+| **Brain** | External LLM API calls (OpenAI, etc.) for reasoning | **Claude Code agents ARE the brain** — no external LLM needed |
 | **Architecture** | Single retrieve → paste | Multi-agent pipeline with validation |
 | **Quality check** | None — returns whatever vector search finds | CRAG validation scores every passage, retries with rewritten queries |
 | **Complex questions** | Same path for all queries | Complexity routing — 1 agent for simple, 3 for multi-part |
@@ -38,7 +39,9 @@ Most RAG solutions for Claude Code are MCP servers — they embed your docs, ret
 | **Infrastructure** | Often requires Docker, vector DB server | Zero infra — pure Python files + Claude agents |
 | **Self-correction** | One-shot, no retry | CRAG loop rewrites queries up to 2x when results are poor |
 
-**TL;DR**: An MCP gives you search results. This plugin gives you a validated, cited answer.
+The only external API call is OpenAI `text-embedding-3-small` for query embedding at search time. Everything else — query analysis, reranking, validation, answer synthesis — runs on Claude Code's own agent system. No extra LLM costs.
+
+**TL;DR**: An MCP gives you search results. This plugin gives you a validated, cited answer — powered by the Claude you're already using.
 
 ---
 
