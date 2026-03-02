@@ -24,13 +24,20 @@ You have documents. You have questions. But keyword search is fragile and LLMs h
 
 ---
 
-## Why not just use a RAG MCP?
+## Why this exists
 
-Most RAG solutions for Claude Code are MCP servers — they embed your docs, retrieve top-k chunks, and paste them into the context window. That works for simple lookups, but falls apart for real questions.
+There are many ways to do RAG with Claude Code. You could wire up Obsidian + an MCP server + a vector DB + a separate AI for summarization. It works — but now you're managing four tools, each with its own setup, updates, and quirks.
+
+Or you could just feed the whole PDF to Claude. But a 600-page book blows past the context window, and even if it fits, you'd burn tokens re-reading it with every question.
+
+This plugin takes a different approach: **one tool, one workflow**. Ingest, search, validate, answer — all inside Claude Code. The only reason OpenAI is involved at all is that Claude doesn't offer an embedding API (yet). Everything else runs on the Claude you're already using.
+
+### vs. Typical RAG MCP
 
 | | Typical RAG MCP | This Plugin |
 |---|---|---|
-| **Brain** | External LLM API calls (OpenAI, etc.) for reasoning | **Claude Code agents ARE the brain** — no external LLM needed |
+| **Workflow** | Obsidian / vector DB / external AI — multiple tools to manage | **Claude Code only** — ingest to answer in one place |
+| **Brain** | External LLM API calls (OpenAI, etc.) for reasoning | **Claude Code agents ARE the brain** — no external LLM |
 | **Architecture** | Single retrieve → paste | Multi-agent pipeline with validation |
 | **Quality check** | None — returns whatever vector search finds | CRAG validation scores every passage, retries with rewritten queries |
 | **Complex questions** | Same path for all queries | Complexity routing — 1 agent for simple, 3 for multi-part |
@@ -39,7 +46,16 @@ Most RAG solutions for Claude Code are MCP servers — they embed your docs, ret
 | **Infrastructure** | Often requires Docker, vector DB server | Zero infra — pure Python files + Claude agents |
 | **Self-correction** | One-shot, no retry | CRAG loop rewrites queries up to 2x when results are poor |
 
-The only external API call is OpenAI `text-embedding-3-small` for query embedding at search time. Everything else — query analysis, reranking, validation, answer synthesis — runs on Claude Code's own agent system. No extra LLM costs.
+### vs. Reading the whole PDF
+
+| | Whole PDF in context | This Plugin |
+|---|---|---|
+| **~50 pages** | Works fine. Just read it. | Overkill |
+| **~150+ pages** | Exceeds context window or costs explode | Index once, query cheaply forever |
+| **Repeated questions** | Full re-read every time (10 questions = 10x cost) | One-time index, ~5K tokens per query |
+| **Citation accuracy** | May hallucinate page numbers | Chunk metadata has exact pages/headings |
+
+The only external API call is OpenAI `text-embedding-3-small` for query embedding. Everything else — query analysis, reranking, validation, answer synthesis — runs on Claude Code's own agent system. No extra LLM costs.
 
 **TL;DR**: An MCP gives you search results. This plugin gives you a validated, cited answer — powered by the Claude you're already paying for. Put those tokens to good use.
 
