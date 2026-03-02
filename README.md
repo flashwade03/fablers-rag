@@ -41,7 +41,7 @@ Most RAG solutions for Claude Code are MCP servers — they embed your docs, ret
 
 The only external API call is OpenAI `text-embedding-3-small` for query embedding at search time. Everything else — query analysis, reranking, validation, answer synthesis — runs on Claude Code's own agent system. No extra LLM costs.
 
-**TL;DR**: An MCP gives you search results. This plugin gives you a validated, cited answer — powered by the Claude you're already using.
+**TL;DR**: An MCP gives you search results. This plugin gives you a validated, cited answer — powered by the Claude you're already paying for. Put those tokens to good use.
 
 ---
 
