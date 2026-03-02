@@ -211,6 +211,17 @@ Pure vector search misses exact terminology. Pure keyword search misses semantic
 
 Simple factual questions skip the query analyst and evaluator, reducing latency from 5 agent calls to 1. Complex multi-part questions get the full pipeline.
 
+### LLM Reranking, Not Algorithmic Reranking
+
+The evaluator agent reranks passages by reading them and scoring relevance — this is LLM-based reranking. In v1.x benchmarks, we tested algorithmic reranking (cross-encoder style) on top of hybrid search, and it actually hurt performance:
+
+| Metric | Hybrid | Hybrid + Algo Rerank | Δ |
+|--------|--------|---------------------|---|
+| Hit@1 | 74.4% | 60.0% | -14.4% |
+| MRR | 0.811 | 0.712 | -0.099 |
+
+The algorithmic reranker reshuffled results that hybrid search had already ranked well, pushing correct answers down. LLM-based reranking doesn't have this problem because it understands the question-passage relationship semantically, not just by pattern matching.
+
 ### CRAG Loop
 
 Not all retrieval attempts succeed. The evaluator checks passage sufficiency and can trigger up to 2 query rewrites, making the pipeline self-correcting.
