@@ -128,7 +128,7 @@ You ── /ask ──▶ Query Analyst ──▶ search.py ──▶ Evaluator 
 Claude Codeでマーケットプレイスを追加してインストール：
 ```
 /plugin marketplace add flashwade03/fablers-rag
-/plugin install fablers-agentic-rag@flashwade03/fablers-rag
+/plugin install fablers-agentic-rag@rag
 ```
 
 ### 2. データ準備

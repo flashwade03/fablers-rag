@@ -128,7 +128,7 @@ You ── /ask ──▶ Query Analyst ──▶ search.py ──▶ Evaluator 
 Claude Code에서 마켓플레이스 추가 후 설치:
 ```
 /plugin marketplace add flashwade03/fablers-rag
-/plugin install fablers-agentic-rag@flashwade03/fablers-rag
+/plugin install fablers-agentic-rag@rag
 ```
 
 ### 2. 데이터 준비

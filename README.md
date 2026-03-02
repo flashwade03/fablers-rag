@@ -128,7 +128,7 @@ You ── /ask ──▶ Query Analyst ──▶ search.py ──▶ Evaluator 
 In Claude Code, add the marketplace and install:
 ```
 /plugin marketplace add flashwade03/fablers-rag
-/plugin install fablers-agentic-rag@flashwade03/fablers-rag
+/plugin install fablers-agentic-rag@rag
 ```
 
 ### 2. Prepare your data
