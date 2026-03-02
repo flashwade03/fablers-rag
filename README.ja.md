@@ -195,8 +195,7 @@ fablers-rag/                          ← リポルート = プラグイン
 │   └── session-start.sh              # セッション初期化
 ├── hooks/
 │   └── hooks.json                    # イベントフック
-├── fablers-rag.template.md           # 設定テンプレート
-└── SKILL.md                          # ルートスキル
+└── fablers-rag.template.md           # 設定テンプレート
 ```
 
 ---

@@ -195,8 +195,7 @@ fablers-rag/                          ← 리포 루트 = 플러그인
 │   └── session-start.sh              # 세션 초기화
 ├── hooks/
 │   └── hooks.json                    # 이벤트 훅
-├── fablers-rag.template.md           # 설정 템플릿
-└── SKILL.md                          # 루트 스킬
+└── fablers-rag.template.md           # 설정 템플릿
 ```
 
 ---

@@ -195,8 +195,7 @@ fablers-rag/                          ← repo root = plugin
 │   └── session-start.sh              # Session initialization
 ├── hooks/
 │   └── hooks.json                    # Event hooks
-├── fablers-rag.template.md           # Config template
-└── SKILL.md                          # Root skill
+└── fablers-rag.template.md           # Config template
 ```
 
 ---
