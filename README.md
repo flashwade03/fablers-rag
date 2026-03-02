@@ -43,16 +43,18 @@ The only external API call is OpenAI `text-embedding-3-small` for query embeddin
 
 **TL;DR**: An MCP gives you search results. This plugin gives you a validated, cited answer — powered by the Claude you're already paying for. Put those tokens to good use.
 
-### Designed for
+### A small arc reactor, not a power grid
 
-This plugin is built for deep Q&A on individual documents — not for indexing millions of records.
+This plugin was born from a real need: ideating on game design theory from Jesse Schell's *The Art of Game Design* — a 600-page book full of interconnected concepts, lenses, and frameworks. The goal was never to index a million documents. It was to deeply understand one.
+
+Think of it as a compact, self-contained reactor you drop into a project:
 
 - A textbook you want to study with citations
 - A technical manual you need to reference accurately
 - Research papers you want to cross-examine
-- Personal notes or documentation you want to query
+- Project documentation you want to query
 
-It uses numpy arrays and in-memory BM25 — no vector DB, no server. If your data fits in a few files, this is all you need. For enterprise-scale knowledge bases, use a dedicated vector DB solution instead.
+numpy arrays + in-memory BM25 — no vector DB, no server, no Docker. If your data fits in a few files, this is all you need. For enterprise-scale knowledge bases with millions of records, use GraphRAG or a dedicated vector DB solution instead.
 
 ---
 
