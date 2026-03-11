@@ -1,0 +1,42 @@
+{
+  "skill_name": "ask",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "What is the elemental tetrad?",
+      "expected_output": "A clear explanation of the elemental tetrad (mechanics, aesthetics, story, technology) with source citations from the book",
+      "files": [],
+      "expectations": [
+        "The answer mentions all four elements: mechanics, aesthetics, story, and technology",
+        "The answer includes inline [Source N] citations",
+        "The answer includes a SOURCES section with chapter/page references",
+        "The answer is based on retrieved passages, not general knowledge"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "What are the four elements of the elemental tetrad, and what lens helps evaluate each one?",
+      "expected_output": "A detailed answer covering each of the four elements with specific lenses for each, demonstrating successful query decomposition",
+      "files": [],
+      "expectations": [
+        "The answer covers all four elements individually (mechanics, aesthetics, story, technology)",
+        "At least one specific lens is named for each element",
+        "The answer includes inline [Source N] citations",
+        "The query-analyst agent was used (complex question path)",
+        "The answer does not collapse multiple elements into a single vague description"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "How does Csikszentmihalyi's concept of flow apply to game design?",
+      "expected_output": "A conceptual explanation of flow theory and its application to game design, with citations",
+      "files": [],
+      "expectations": [
+        "The answer explains the concept of flow (balance between challenge and skill)",
+        "The answer connects flow to game design specifically",
+        "The answer includes inline [Source N] citations",
+        "The answer references Csikszentmihalyi by name"
+      ]
+    }
+  ]
+}

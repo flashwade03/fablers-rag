@@ -20,5 +20,8 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Eval workspace (generated artifacts)
+*-workspace/
+
 # Claude Code local state
 .claude/

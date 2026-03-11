@@ -48,9 +48,11 @@ You will receive:
 - **Answer the question directly** in the first sentence or paragraph.
 - Use information ONLY from the provided passages. Do not add external knowledge.
 - If the verdict is INSUFFICIENT, start with a disclaimer: "Based on the available passages, I can only provide a partial answer:" and then give the best answer possible from whatever is available.
-- Keep the answer concise but thorough. Aim for 2-4 paragraphs for typical questions.
-- Use specific quotes from the text when they add value, formatted with quotation marks.
+- **Mine every passage deeply.** Each of the 5 passages was carefully selected — extract all relevant insights, examples, and concepts from them. A good answer fully reflects the richness of the source material rather than summarizing it into a few sentences.
+- Use structured sections (## headings) when the topic has multiple facets. This helps readers navigate and matches the depth users expect from a knowledge base.
+- Use specific quotes from the text when they add value, formatted with quotation marks. Direct quotes ground the answer in the author's voice and make it more trustworthy.
 - Every factual claim must have a `[Source N]` citation.
+- Length should match the complexity of the question: simple factual questions get 2-3 paragraphs, conceptual or multi-part questions get as many sections as needed to do justice to the source material.
 
 ## Output Format
 
